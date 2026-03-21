@@ -14,6 +14,7 @@ except ImportError:
 load_dotenv()
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
 DESKTOP_PATH = os.path.expanduser("~/Desktop")
+ENV_PATH = os.path.expanduser("~/.mygit_tool/.env")
 
 C_CYAN = "\033[96m"
 C_GREEN = "\033[92m"
@@ -65,10 +66,33 @@ def check_status():
         print(f"  📁 {folder}  =>  🌐 {clean_name}")
 
 
+def update_token():
+    """Allows the user to update their GitHub Token from the CLI."""
+    global GITHUB_TOKEN
+    print(f"\n{C_CYAN}--- Update GitHub Token ---{C_RESET}")
+    print(
+        f"{C_YELLOW}Tokens expire periodically. "
+        f"Paste your new token here.{C_RESET}"
+    )
+    new_token = input("New Token: ").strip()
+
+    if new_token:
+        with open(ENV_PATH, "w", encoding="utf-8") as f:
+            f.write(f"GITHUB_TOKEN={new_token}\n")
+
+        GITHUB_TOKEN = new_token
+        print(f"{C_GREEN}✅ Token successfully updated!{C_RESET}")
+    else:
+        print(f"{C_RED}Update cancelled. Token cannot be empty.{C_RESET}")
+
+
 def run_sync(commit_msg="Auto-sync"):
     """Core logic to initialize, create remote repo, and push."""
     if not GITHUB_TOKEN:
-        print(f"{C_RED}Error: GITHUB_TOKEN not found in .env{C_RESET}")
+        print(
+            f"{C_RED}Error: GITHUB_TOKEN not found! "
+            f"Please use option 5 to set it.{C_RESET}"
+        )
         return
 
     try:
@@ -76,6 +100,10 @@ def run_sync(commit_msg="Auto-sync"):
         user = g.get_user()
     except Exception as e:
         print(f"{C_RED}GitHub Auth Error: {e}{C_RESET}")
+        print(
+            f"{C_YELLOW}Your token may be invalid or expired. "
+            f"Use option 5 to update it.{C_RESET}"
+        )
         return
 
     folders = get_syncable_folders()
@@ -137,12 +165,16 @@ def menu():
             f"  {C_CYAN}║{C_RESET}"
         )
         print(
-            f"{C_CYAN}║{C_RESET} 5. ❌ Exit"
+            f"{C_CYAN}║{C_RESET} 5. 🔑 Update GitHub Token"
+            f"          {C_CYAN}║{C_RESET}"
+        )
+        print(
+            f"{C_CYAN}║{C_RESET} 6. ❌ Exit"
             f"                         {C_CYAN}║{C_RESET}"
         )
         print(f"{C_CYAN}╚════════════════════════════════════╝{C_RESET}")
 
-        choice = input(f"{C_YELLOW}Select an option (1-5): {C_RESET}").strip()
+        choice = input(f"{C_YELLOW}Select an option (1-6): {C_RESET}").strip()
 
         if choice == '1':
             check_status()
@@ -163,10 +195,12 @@ def menu():
             except KeyboardInterrupt:
                 print(f"\n{C_YELLOW}Background loop stopped.{C_RESET}")
         elif choice == '5':
+            update_token()
+        elif choice == '6':
             print(f"{C_CYAN}Goodbye!{C_RESET}")
             sys.exit()
         else:
-            print(f"{C_RED}Invalid choice. Please select 1-5.{C_RESET}")
+            print(f"{C_RED}Invalid choice. Please select 1-6.{C_RESET}")
 
 
 if __name__ == "__main__":

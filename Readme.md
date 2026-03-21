@@ -1,8 +1,3 @@
-Here is the complete, unified README.md. I have taken the sections you provided and seamlessly appended the How to Use, Folder Naming Rules, and License sections right after the installation steps.
-
-Copy this entire block and use it as your final README.md:
-
-Markdown
 # 🚀 MyGit Automation Tool
 
 A lightweight, interactive CLI tool that automatically detects specific folders on your Desktop, initializes them as Git repositories, creates private repositories on GitHub, and pushes your code seamlessly. 
@@ -33,6 +28,7 @@ All of this happens in the background, or with a single terminal command.
 * **Auto `.gitignore`:** Automatically skips compiling binaries, `node_modules`, `.DS_Store`, and `.env` files.
 * **Empty Folder Protection:** The script won't crash or create empty repos; it waits until you actually put code in the folder.
 * **Interactive Colored Menu:** Easy-to-use CLI interface.
+* **In-App Token Management:** Update expired GitHub tokens directly from the CLI.
 * **Flake8 Compliant:** Strict adherence to PEP 8 Python standards.
 
 ---
@@ -77,17 +73,9 @@ Make sure you have **Python 3** and **Poetry** installed on your system.
    bash install.sh
 Generate a Fine-grained Personal Access Token on GitHub (following the steps above).
 
-The installer creates a hidden .env file for you. Open it:
+Open your terminal and type mygit.
 
-Bash
-nano ~/.mygit_tool/.env
-Paste your token so it looks exactly like this:
-
-Code snippet
-GITHUB_TOKEN=github_pat_12345yourtokenhere67890
-Save and exit (Ctrl+O, Enter, Ctrl+X).
-
-Restart your terminal (or run source ~/.zshrc).
+Select Option 5 (Update GitHub Token) and paste your token when prompted. You're ready to go!
 
 💻 How to Use MyGit
 1. The Golden Rule: Folder Naming & Location
@@ -129,8 +117,7 @@ When you type mygit, you will see this menu:
 
 4. Start Background Loop: Leaves the script running invisibly in your terminal, scanning your Desktop every 1 hour to automatically push any new projects it finds.
 
+5. Update GitHub Token: Easily update or replace your Personal Access Token if it expires without needing to manually edit the .env file.
+
 📝 License
 Created by Tarik (@laghzal49). Feel free to fork, learn from the code, and modify it for your own workflow!
-
-
-Would you like me to walk you through doing the first test run of the script on your machine to make sure everything connects smoothly to GitHub?
