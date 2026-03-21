@@ -1,0 +1,16 @@
+[tool.poetry]
+name = "auto-github"
+version = "0.1.0"
+description = "Autmotion-github"
+authors = ["tlaghzal <laghzaltarik0@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+pygithub = "^2.8.1"
+gitpython = "^3.1.46"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
