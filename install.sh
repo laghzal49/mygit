@@ -29,8 +29,15 @@ if [ ! -f "auto_git.py" ]; then
     exit 1
 fi
 
+if [ ! -f "mygit_core.py" ] || [ ! -f "mygit_ui.py" ]; then
+    echo -e "${C_RED}❌ Error: required module files are missing.${C_RESET}"
+    exit 1
+fi
+
 mkdir -p "$INSTALL_DIR"
 cp auto_git.py "$SCRIPT_PATH"
+cp mygit_core.py "$INSTALL_DIR/mygit_core.py"
+cp mygit_ui.py "$INSTALL_DIR/mygit_ui.py"
 cd "$INSTALL_DIR"
 
 if [ ! -f "pyproject.toml" ]; then
@@ -129,3 +136,4 @@ echo ""
 echo -e "${C_GREEN}🎉 Installation complete!${C_RESET}"
 echo -e "⚠️  ${C_RED}Action Required:${C_RESET} Set your token in $ENV_PATH (GITHUB_TOKEN=your_token_here)"
 echo -e "Run: ${C_CYAN}source ~/.zshrc${C_RESET} (or bashrc) to use the 'mygit' command immediately."
+echo -e "Love From ${C_RED}TLAGHZAL ❤️"

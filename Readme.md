@@ -27,9 +27,15 @@ It also supports background syncing via a systemd service on Linux.
 - Safe repo-name cleanup (removes standalone `git` tokens)
 - Auto `.gitignore` generation
 - Cursus-style interactive TUI menu
+- Curses-driven screens across menu, config, and prompts
 - Curses folder sub-menu with multi-select (`Space` to toggle)
 - Push method toggle (`HTTPS` / `SSH`)
 - Configurable scan path
+- Built-in config editor (token/push method/path)
+- Dry-run preview before sync execution
+- Retry with exponential backoff for network/API/push actions
+- Idempotent remote handling (reuses existing GitHub repo + `origin`)
+- File logging at `~/.mygit_tool/mygit.log`
 - Optional systemd daemon mode (`--daemon`)
 
 ---
@@ -69,7 +75,7 @@ GITHUB_TOKEN=your_token_here
 ```
 
 The installer will:
-- Copy `auto_git.py` to `~/.mygit_tool/`
+- Copy `auto_git.py`, `mygit_core.py`, and `mygit_ui.py` to `~/.mygit_tool/`
 - Install dependencies with Poetry
 - Create `~/.local/bin/mygit` launcher
 - Configure shell integration (`.bashrc` and `.zshrc`)
@@ -98,6 +104,7 @@ The menu uses a Cursus-style terminal UI (`curses`):
 - Use `↑` / `↓` to navigate
 - Press `Enter` to execute an option
 - In folder selection, use `Space` to select/unselect multiple folders
+- Main menu shows a short description of the currently highlighted action
 
 ### Folder rules
 
@@ -120,9 +127,18 @@ Examples:
 5. Switch Folders (Multi-Select)
 6. Switch Push Method (SSH/HTTPS)
 7. Change Scan Directory
-8. Exit
+8. Config (Token/Path/Push)
+9. Exit
 
-Note: option `7` uses standard typed path input for easier directory entry.
+### Project structure
+
+- `auto_git.py`: thin entrypoint (CLI/daemon launcher)
+- `mygit_core.py`: sync logic, retries, logging, config state
+- `mygit_ui.py`: curses UI screens and action wiring
+
+Option `7` supports both styles:
+- browse directories (arrow-key selection, VS Code-like flow)
+- or type a full path manually
 
 ---
 
@@ -180,7 +196,16 @@ Also ensure `~/.local/bin` is in your `PATH`.
 
 If using SSH mode, make sure your SSH key is added to GitHub and your agent is running.
 
+### Logs and retries
+
+- Runtime logs are stored at `~/.mygit_tool/mygit.log`.
+- Retry behavior is configurable through `.env` values:
+	- `MYGIT_RETRY_COUNT`
+	- `MYGIT_RETRY_BACKOFF`
+
 ---
+
+
 
 ## 📝 License
 
