@@ -27,7 +27,7 @@ It also supports background syncing via a systemd service on Linux.
 - Safe repo-name cleanup (removes standalone `git` tokens)
 - Auto `.gitignore` generation
 - Cursus-style interactive TUI menu
-- Folder targeting (sync one selected folder)
+- Curses folder sub-menu with multi-select (`Space` to toggle)
 - Push method toggle (`HTTPS` / `SSH`)
 - Configurable scan path
 - Optional systemd daemon mode (`--daemon`)
@@ -97,6 +97,7 @@ mygit
 The menu uses a Cursus-style terminal UI (`curses`):
 - Use `↑` / `↓` to navigate
 - Press `Enter` to execute an option
+- In folder selection, use `Space` to select/unselect multiple folders
 
 ### Folder rules
 
@@ -116,10 +117,12 @@ Examples:
 2. Run Auto-Sync Now
 3. Run Sync with Custom Commit
 4. Start Background Loop (1hr)
-5. Switch Folder
+5. Switch Folders (Multi-Select)
 6. Switch Push Method (SSH/HTTPS)
 7. Change Scan Directory
 8. Exit
+
+Note: option `7` uses standard typed path input for easier directory entry.
 
 ---
 
