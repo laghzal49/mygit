@@ -2,6 +2,7 @@ import os
 import time
 import re
 import sys
+import curses
 
 try:
     import github
@@ -285,52 +286,120 @@ def run_sync(commit_msg="Auto-sync"):
             print(f"{C_RED}Error processing {folder}: {e}{C_RESET}")
 
 
-def menu():
-    """Interactive CLI Menu for the user."""
-    width = 50
-    top_border = f"{C_CYAN}╔{'═' * (width + 2)}╗{C_RESET}"
-    mid_border = f"{C_CYAN}╠{'═' * (width + 2)}╣{C_RESET}"
-    bottom_border = f"{C_CYAN}╚{'═' * (width + 2)}╝{C_RESET}"
+def curses_menu(stdscr):
+    """Draw the interactive curses menu and return selected option."""
+    curses.curs_set(0)
+    curses.start_color()
+    curses.init_pair(1, curses.COLOR_CYAN, curses.COLOR_BLACK)
+    curses.init_pair(2, curses.COLOR_YELLOW, curses.COLOR_BLACK)
+    curses.init_pair(3, curses.COLOR_BLACK, curses.COLOR_CYAN)
 
-    def menu_line(text):
-        return (
-            f"{C_CYAN}║{C_RESET} "
-            f"{text.ljust(width)} "
-            f"{C_CYAN}║{C_RESET}"
-        )
+    menu_items = [
+        "📊 Check Status (Dry Run)",
+        "⚡ Run Auto-Sync Now",
+        "📝 Run Sync with Custom Commit",
+        "🔄 Start Background Loop (1hr)",
+        "📁 Switch Folder",
+        "🔀 Switch Push Method (SSH/HTTPS)",
+        "📂 Change Scan Directory",
+        "❌ Exit",
+    ]
+
+    current_row = 0
 
     while True:
-        selected_name = "All folders"
-        if SELECTED_FOLDER:
-            selected_name = SELECTED_FOLDER[0]
+        stdscr.clear()
+        selected_name = (
+            SELECTED_FOLDER[0] if SELECTED_FOLDER else "All folders"
+        )
 
-        print(f"\n{top_border}")
-        print(menu_line("🚀 MYGIT AUTOMATION · CURSUS"))
-        print(mid_border)
-        print(menu_line(f"Scan path : {DESKTOP_PATH}"))
-        print(menu_line(f"Push mode : {PUSH_METHOD.upper()}"))
-        print(menu_line(f"Selected  : {selected_name}"))
-        print(mid_border)
-        print(menu_line("1. 📊 Check Status (Dry Run)"))
-        print(menu_line("2. ⚡ Run Auto-Sync Now"))
-        print(menu_line("3. 📝 Run Sync with Custom Commit"))
-        print(menu_line("4. 🔄 Start Background Loop (1hr)"))
-        print(menu_line("5. 📁 Switch Folder"))
-        print(menu_line("6. 🔀 Switch Push Method (SSH/HTTPS)"))
-        print(menu_line("7. 📂 Change Scan Directory"))
-        print(menu_line("8. ❌ Exit"))
-        print(bottom_border)
+        stdscr.addstr(
+            1,
+            2,
+            "╔════════════════════════════════════════════════════╗",
+            curses.color_pair(1),
+        )
+        stdscr.addstr(
+            2,
+            2,
+            "║ 🚀 MYGIT AUTOMATION · CURSUS TUI                  ║",
+            curses.color_pair(1),
+        )
+        stdscr.addstr(
+            3,
+            2,
+            "╠════════════════════════════════════════════════════╣",
+            curses.color_pair(1),
+        )
+        stdscr.addstr(
+            4,
+            2,
+            f"║ Scan path : {DESKTOP_PATH:<38} ║",
+            curses.color_pair(1),
+        )
+        stdscr.addstr(
+            5,
+            2,
+            f"║ Push mode : {PUSH_METHOD.upper():<38} ║",
+            curses.color_pair(1),
+        )
+        stdscr.addstr(
+            6,
+            2,
+            f"║ Selected  : {selected_name:<38} ║",
+            curses.color_pair(1),
+        )
+        stdscr.addstr(
+            7,
+            2,
+            "╠════════════════════════════════════════════════════╣",
+            curses.color_pair(1),
+        )
 
-        choice = input(f"{C_YELLOW}Select an option (1-8): {C_RESET}").strip()
+        for index, item in enumerate(menu_items):
+            y_pos = 9 + index
+            if index == current_row:
+                stdscr.addstr(y_pos, 4, item.ljust(46), curses.color_pair(3))
+            else:
+                stdscr.addstr(y_pos, 4, item.ljust(46), curses.color_pair(1))
 
-        if choice == '1':
+        stdscr.addstr(
+            18,
+            2,
+            "╚════════════════════════════════════════════════════╝",
+            curses.color_pair(1),
+        )
+        stdscr.addstr(
+            20,
+            2,
+            "Use ↑/↓ arrows to navigate, ENTER to select.",
+            curses.color_pair(2),
+        )
+        stdscr.refresh()
+
+        key = stdscr.getch()
+        if key == curses.KEY_UP and current_row > 0:
+            current_row -= 1
+        elif key == curses.KEY_DOWN and current_row < len(menu_items) - 1:
+            current_row += 1
+        elif key in [curses.KEY_ENTER, 10, 13]:
+            return current_row + 1
+
+
+def interactive_loop():
+    """Handle curses UI and execute selected actions in standard terminal."""
+    while True:
+        choice = curses.wrapper(curses_menu)
+        os.system("clear" if os.name == "posix" else "cls")
+
+        if choice == 1:
             check_status()
-        elif choice == '2':
+        elif choice == 2:
             run_sync()
-        elif choice == '3':
+        elif choice == 3:
             msg = input(f"{C_YELLOW}Enter commit message: {C_RESET}").strip()
             run_sync(msg if msg else "Auto-sync")
-        elif choice == '4':
+        elif choice == 4:
             print(
                 f"{C_GREEN}Running in background... "
                 f"Press Ctrl+C to stop.{C_RESET}"
@@ -341,18 +410,28 @@ def menu():
                     time.sleep(3600)
             except KeyboardInterrupt:
                 print(f"\n{C_YELLOW}Background loop stopped.{C_RESET}")
-        elif choice == '5':
+        elif choice == 5:
             switch_folder()
-        elif choice == '6':
+        elif choice == 6:
             switch_push_method()
-        elif choice == '7':
+        elif choice == 7:
             change_directory()
-        elif choice == '8':
+        elif choice == 8:
             print(f"{C_CYAN}Goodbye!{C_RESET}")
             sys.exit()
-        else:
-            print(f"{C_RED}Invalid choice. Please select 1-8.{C_RESET}")
+
+        if choice not in [4, 8]:
+            input(f"\n{C_YELLOW}Press ENTER to return to the menu...{C_RESET}")
 
 
 if __name__ == "__main__":
-    menu()
+    if len(sys.argv) > 1 and sys.argv[1] == "--daemon":
+        print(f"{C_GREEN}Starting daemon mode. Running every hour...{C_RESET}")
+        try:
+            while True:
+                run_sync("Auto-sync (Daemon)")
+                time.sleep(3600)
+        except Exception as e:
+            print(f"{C_RED}Daemon crashed: {e}{C_RESET}")
+    else:
+        interactive_loop()
