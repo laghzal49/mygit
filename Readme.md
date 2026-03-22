@@ -1,123 +1,121 @@
 # 🚀 MyGit Automation Tool
 
-A lightweight, interactive CLI tool that automatically detects specific folders on your Desktop, initializes them as Git repositories, creates private repositories on GitHub, and pushes your code seamlessly. 
+MyGit is a lightweight CLI that scans your Desktop for folders containing `git` in the name, initializes local Git repos, creates private GitHub repositories, and pushes automatically.
 
-Built to keep your workflow fast, your Desktop organized, and your GitHub profile green.
-
-**Authored by:** [@laghzal49](https://github.com/laghzal49) (Tarik)
+**Author:** [@laghzal49](https://github.com/laghzal49)
 
 ---
 
-## 🤔 Why use this tool?
+## 🤔 Why this tool?
 
-If you create a lot of mini-projects, scripts, or daily exercises (like the projects at 1337), manually running `git init`, going to GitHub, clicking "New Repository", copying the remote URL, and pushing can get incredibly tedious. 
+Manual workflow (`git init` → create repo on GitHub → add remote → first push) gets repetitive when you create many small projects.
 
-**MyGit** automates this entirely. Just name your folder with the word `git` in it (e.g., `maze-project-git`), and this tool will:
-1. Strip the "git" tag (renaming the repo to `maze-project`).
-2. Auto-generate a safe `.gitignore` so you don't upload junk files.
-3. Create a private repository on your GitHub account.
-4. Push your initial code.
-
-All of this happens in the background, or with a single terminal command.
-
----
-
-## ✨ Key Features
-* **Smart Detection:** Only targets folders on your Desktop containing the word `git` (case-insensitive).
-* **Auto-Sanitization:** Cleans up folder names. `My_App-git` becomes `My_App` on GitHub.
-* **Auto `.gitignore`:** Automatically skips compiling binaries, `node_modules`, `.DS_Store`, and `.env` files.
-* **Empty Folder Protection:** The script won't crash or create empty repos; it waits until you actually put code in the folder.
-* **Interactive Colored Menu:** Easy-to-use CLI interface.
-* **In-App Token Management:** Update expired GitHub tokens directly from the CLI.
-* **Flake8 Compliant:** Strict adherence to PEP 8 Python standards.
+MyGit automates that flow by:
+1. Detecting eligible folders on `~/Desktop`.
+2. Sanitizing the remote repository name (removes `git`).
+3. Creating a private GitHub repository.
+4. Generating a starter `.gitignore`.
+5. Committing and pushing your code.
 
 ---
 
-## 🔑 The GitHub Token: What, Why, and How?
+## ✨ Features
 
-### Why do you need a token?
-To create repositories on your behalf, this script needs to authenticate with GitHub. Instead of using your actual account password (which is insecure and blocked by GitHub for API use), we use a **Personal Access Token (PAT)**. Think of it as a temporary, restricted key that only has permission to manage repositories.
+- Smart folder detection (`git` in folder name, case-insensitive).
+- Safe repo-name cleanup before creating GitHub repositories.
+- Auto-generated `.gitignore` for common junk files.
+- Interactive CLI menu with status check and loop mode.
+- Simple token-based authentication with `.env`.
 
-### How to get your Token (Step-by-Step)
-1. Log in to your GitHub account on your browser.
-2. Click your profile picture in the top right corner and select **Settings**.
-3. Scroll all the way down the left sidebar and click **<> Developer settings**.
-4. Click **Personal access tokens**, then select **Fine-grained tokens**.
-5. Click the **Generate new token** button.
-6. Fill out the details:
-   * **Token name:** `MyGit Automation CLI` (or whatever you prefer).
-   * **Expiration:** Set it to 90 days or custom (you can regenerate it later).
-   * **Repository access:** Select **All repositories**.
-7. Under **Permissions**, click **Repository permissions** and change:
-   * **Administration:** Read and write
-   * **Contents:** Read and write
-   * **Metadata:** Read-only (usually set by default)
-8. Click **Generate token** at the bottom.
-9. ⚠️ **COPY YOUR TOKEN NOW!** GitHub will only show it to you this one time.
+### 🆕 New Feature
 
-### How to use the Token securely
-Never paste your token directly into a Python script! If you accidentally upload that script, anyone can access your GitHub. Instead, we use a hidden `.env` file. Our installer sets this up for you automatically.
+- Updated GitHub authentication to modern PyGithub token auth (`github.Auth.Token`) to avoid deprecation warnings.
+- Added clearer 403 permission guidance when a token cannot create repositories.
+
+---
+
+## 🔑 GitHub token setup
+
+Use a Personal Access Token (PAT), not your password.
+
+### Fine-grained token (recommended)
+
+When creating the token in GitHub settings:
+- Repository access: **All repositories** (or include the repos you need).
+- Repository permissions:
+  - **Administration:** Read and write
+  - **Contents:** Read and write
+  - **Metadata:** Read-only
+
+Then save your token in `~/.mygit_tool/.env`:
+
+```env
+GITHUB_TOKEN=your_token_here
+```
 
 ---
 
 ## ⚙️ Installation
 
 ### Prerequisites
-Make sure you have **Python 3** and **Poetry** installed on your system.
 
-### Quick Install
-1. Clone or download this repository.
-2. Open your terminal in the downloaded folder.
-3. Run the installer script:
-   ```bash
-   bash install.sh
-Generate a Fine-grained Personal Access Token on GitHub (following the steps above).
+- Python 3
+- Poetry
 
-Open your terminal and type mygit.
+### Install
 
-Select Option 5 (Update GitHub Token) and paste your token when prompted. You're ready to go!
+```bash
+bash install.sh
+```
 
-💻 How to Use MyGit
-1. The Golden Rule: Folder Naming & Location
-For MyGit to safely know which folders to push (and which personal folders to ignore), it looks for two things:
+After install:
+1. Run `mygit`
+2. Add your PAT to `~/.mygit_tool/.env`
+3. Run option `2` to sync
 
-Location: The folder must be on your ~/Desktop.
+---
 
-Naming: The folder must contain the word git (case-insensitive) anywhere in its name.
+## 💻 Usage
 
-When MyGit pushes the folder to GitHub, it automatically sanitizes the name by removing the word "git" and cleaning up any leftover dashes or underscores to keep your remote repository looking professional.
+### Folder rule
 
-Naming Examples:
+A folder is eligible only if:
+- It is under `~/Desktop`
+- Its name contains `git`
 
-📁 maze-project-git ➡️ 🌐 Creates GitHub repo: maze-project
+Examples:
+- `maze-project-git` → creates repo `maze-project`
+- `Git_PushSwap` → creates repo `PushSwap`
+- `python_scripts` → ignored
 
-📁 Git_PushSwap ➡️ 🌐 Creates GitHub repo: PushSwap
+### Menu options
 
-📁 libft-git-test ➡️ 🌐 Creates GitHub repo: libft-test
+1. Check Status (Dry Run)
+2. Run Auto-Sync Now
+3. Run Sync with Custom Commit
+4. Start Background Loop (1hr)
+5. Exit
 
-📁 python_scripts ➡️ ❌ IGNORED (Does not contain "git")
+---
 
-2. The Step-by-Step Workflow
-Create your folder on your Desktop following the naming rule (e.g., ~/Desktop/ft_printf-git).
+## 🛠 Troubleshooting
 
-Write your code inside that folder. (Note: MyGit has Empty Folder Protection; it will wait until you actually put a file in the folder before trying to push it).
+### 403: Resource not accessible by personal access token
 
-Open your terminal from anywhere and type:
+This means your token does not have enough permission to create repositories.
 
-Bash
-mygit
-3. The Interactive Menu
-When you type mygit, you will see this menu:
+Fix:
+1. Create a new PAT with the permissions listed above.
+2. Update `GITHUB_TOKEN` in `~/.mygit_tool/.env`.
+3. Run option `2` again.
 
-1. Check Status (Dry Run): Safely scan your Desktop to see which folders are ready to be pushed without actually modifying them or contacting GitHub yet.
+### Auth/Push issues
 
-2. Run Auto-Sync Now: Instantly initialize, commit, and push all valid folders using the default "Auto-sync" commit message.
+- Confirm token is saved in `~/.mygit_tool/.env` as `GITHUB_TOKEN=...`.
+- Re-run `bash install.sh` after pulling latest changes.
 
-3. Run Sync with Custom Commit: Lets you type a specific initial commit message (e.g., "completed mandatory part") before pushing.
+---
 
-4. Start Background Loop: Leaves the script running invisibly in your terminal, scanning your Desktop every 1 hour to automatically push any new projects it finds.
+## 📝 License
 
-5. Update GitHub Token: Easily update or replace your Personal Access Token if it expires without needing to manually edit the .env file.
-
-📝 License
-Created by Tarik (@laghzal49). Feel free to fork, learn from the code, and modify it for your own workflow!
+Created by Tarik. Fork and adapt for your workflow.
