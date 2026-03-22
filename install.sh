@@ -5,6 +5,8 @@ set -euo pipefail
 INSTALL_DIR="$HOME/.mygit_tool"
 SCRIPT_PATH="$INSTALL_DIR/auto_git.py"
 ENV_PATH="$INSTALL_DIR/.env"
+BIN_DIR="$HOME/.local/bin"
+LAUNCHER_PATH="$BIN_DIR/mygit"
 ALIAS_LINE="alias mygit='(cd $INSTALL_DIR && poetry run python3 auto_git.py)'"
 
 echo "🚀 Installing MyGit Automation Tool..."
@@ -28,7 +30,7 @@ if [ ! -f "pyproject.toml" ]; then
                 -n
 fi
 
-poetry install --no-interaction
+poetry install --no-interaction --no-root
 
 touch "$ENV_PATH"
 
@@ -59,7 +61,24 @@ add_alias_if_missing() {
 add_alias_if_missing "$HOME/.zshrc"
 add_alias_if_missing "$HOME/.bashrc"
 
+mkdir -p "$BIN_DIR"
+cat > "$LAUNCHER_PATH" <<EOF
+#!/usr/bin/env bash
+cd "$INSTALL_DIR" || exit 1
+exec poetry run python3 auto_git.py "\$@"
+EOF
+chmod +x "$LAUNCHER_PATH"
+
+if ! grep -Fq 'export PATH="$HOME/.local/bin:$PATH"' "$HOME/.bashrc"; then
+    echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$HOME/.bashrc"
+fi
+
+if ! grep -Fq 'export PATH="$HOME/.local/bin:$PATH"' "$HOME/.zshrc"; then
+    echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$HOME/.zshrc"
+fi
+
 echo "✅ Installed script at: $SCRIPT_PATH"
+echo "✅ Launcher created at: $LAUNCHER_PATH"
 echo "✅ Environment file ready at: $ENV_PATH"
 echo "⚠️  Set your token in $ENV_PATH (GITHUB_TOKEN=your_token_here)"
 echo "🎉 Installation complete!"
