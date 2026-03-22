@@ -12,7 +12,7 @@ Manual workflow (`git init` → create repo on GitHub → add remote → first p
 
 MyGit automates that flow by:
 1. Detecting eligible folders on `~/Desktop`.
-2. Sanitizing the remote repository name (removes `git`).
+2. Sanitizing the remote repository name (removes standalone `git` tags).
 3. Creating a private GitHub repository.
 4. Generating a starter `.gitignore`.
 5. Committing and pushing your code.
@@ -31,6 +31,8 @@ MyGit automates that flow by:
 
 - Updated GitHub authentication to modern PyGithub token auth (`github.Auth.Token`) to avoid deprecation warnings.
 - Added clearer 403 permission guidance when a token cannot create repositories.
+- Added folder targeting with option `5` to sync one selected folder.
+- Added push-method toggle with option `6` to switch between HTTPS and SSH.
 
 ---
 
@@ -65,13 +67,21 @@ GITHUB_TOKEN=your_token_here
 ### Install
 
 ```bash
-bash install.sh
+./install.sh
 ```
 
 After install:
 1. Run `mygit`
-2. Add your PAT to `~/.mygit_tool/.env`
+2. Add your PAT to `~/.mygit_tool/.env` (`GITHUB_TOKEN=...`)
 3. Run option `2` to sync
+
+Installer defaults in `~/.mygit_tool/.env`:
+
+```env
+GITHUB_TOKEN=
+PUSH_METHOD=https
+SCAN_PATH=~/Desktop
+```
 
 ---
 
@@ -80,7 +90,7 @@ After install:
 ### Folder rule
 
 A folder is eligible only if:
-- It is under `~/Desktop`
+- It is under your configured `SCAN_PATH` (default: `~/Desktop`)
 - Its name contains `git`
 
 Examples:
@@ -94,7 +104,10 @@ Examples:
 2. Run Auto-Sync Now
 3. Run Sync with Custom Commit
 4. Start Background Loop (1hr)
-5. Exit
+5. Switch Folder (sync one selected folder)
+6. Switch Push Method (SSH/HTTPS)
+7. Change Scan Directory
+8. Exit
 
 ---
 
@@ -112,10 +125,11 @@ Fix:
 ### Auth/Push issues
 
 - Confirm token is saved in `~/.mygit_tool/.env` as `GITHUB_TOKEN=...`.
+- If using SSH mode, make sure your SSH key is configured in GitHub.
 - Re-run `bash install.sh` after pulling latest changes.
 
 ---
 
 ## 📝 License
 
-Created by Tarik. Fork and adapt for your workflow.
+Created by tlaghzal. Fork and adapt for your workflow.
