@@ -20,7 +20,9 @@ DESKTOP_PATH = os.path.expanduser(
     os.getenv("SCAN_PATH", "~/Desktop")
 )
 PUSH_METHOD = os.getenv("PUSH_METHOD", "https").lower()
-SELECTED_FOLDER = None
+
+# Changed to a list to support multi-select
+SELECTED_FOLDERS = []
 
 C_CYAN = "\033[96m"
 C_GREEN = "\033[92m"
@@ -73,15 +75,15 @@ def check_status():
     """Dry run feature to see what would be synced."""
     print(f"\n{C_CYAN}--- Status Check ---{C_RESET}")
     folders = get_syncable_folders()
-    print(
-        f"{C_YELLOW}Push method:{C_RESET} {PUSH_METHOD.upper()}"
-    )
+    print(f"{C_YELLOW}Push method:{C_RESET} {PUSH_METHOD.upper()}")
 
-    if SELECTED_FOLDER:
-        print(
-            f"{C_YELLOW}Selected folder:{C_RESET} "
-            f"{SELECTED_FOLDER[0]}"
-        )
+    if SELECTED_FOLDERS:
+        names = ", ".join([f[0] for f in SELECTED_FOLDERS])
+        print(f"{C_YELLOW}Selected folders:{C_RESET} {names}")
+
+        # Filter the folders array based on selections
+        selected_names = [f[0] for f in SELECTED_FOLDERS]
+        folders = [f for f in folders if f[0] in selected_names]
 
     if not folders:
         print(
@@ -97,44 +99,6 @@ def check_status():
     for folder, _ in folders:
         clean_name = get_clean_name(folder)
         print(f"  📁 {folder}  =>  🌐 {clean_name}")
-
-
-def switch_folder():
-    """Allow the user to pick one target folder for sync."""
-    global SELECTED_FOLDER
-
-    folders = get_syncable_folders()
-    if not folders:
-        print(
-            f"{C_YELLOW}No available folders to select right now.{C_RESET}"
-        )
-        SELECTED_FOLDER = None
-        return
-
-    print(f"\n{C_CYAN}--- Switch Folder ---{C_RESET}")
-    print(f"{C_YELLOW}0. All folders (default){C_RESET}")
-    for index, (folder, _) in enumerate(folders, start=1):
-        print(f"{C_YELLOW}{index}. {folder}{C_RESET}")
-
-    choice = input("Select folder number: ").strip()
-    if choice == "0":
-        SELECTED_FOLDER = None
-        print(f"{C_GREEN}Selection cleared: syncing all folders.{C_RESET}")
-        return
-
-    if not choice.isdigit():
-        print(f"{C_RED}Invalid selection.{C_RESET}")
-        return
-
-    selected_index = int(choice)
-    if selected_index < 1 or selected_index > len(folders):
-        print(f"{C_RED}Selection out of range.{C_RESET}")
-        return
-
-    SELECTED_FOLDER = folders[selected_index - 1]
-    print(
-        f"{C_GREEN}Selected folder: {SELECTED_FOLDER[0]}{C_RESET}"
-    )
 
 
 def switch_push_method():
@@ -156,7 +120,7 @@ def switch_push_method():
 def change_directory():
     """Change the base directory for scanning folders."""
     global DESKTOP_PATH
-    global SELECTED_FOLDER
+    global SELECTED_FOLDERS
 
     print(f"\n{C_CYAN}--- Change Directory ---{C_RESET}")
     new_path = input(
@@ -174,7 +138,7 @@ def change_directory():
         return
 
     DESKTOP_PATH = new_path
-    SELECTED_FOLDER = None
+    SELECTED_FOLDERS = []
     save_config()
     print(f"{C_GREEN}Directory changed to: {DESKTOP_PATH}{C_RESET}")
 
@@ -193,24 +157,22 @@ def run_sync(commit_msg="Auto-sync"):
         return
 
     folders = get_syncable_folders()
-    if not folders:
-        print(f"{C_GREEN}No new folders to sync.{C_RESET}")
-        return
 
-    if SELECTED_FOLDER:
-        selected_name = SELECTED_FOLDER[0]
-        folders = [
-            folder_info
-            for folder_info in folders
-            if folder_info[0] == selected_name
-        ]
+    # Filter if multi-select is active
+    if SELECTED_FOLDERS:
+        selected_names = [f[0] for f in SELECTED_FOLDERS]
+        folders = [f for f in folders if f[0] in selected_names]
 
         if not folders:
             print(
-                f"{C_YELLOW}Selected folder is not available anymore. "
-                f"Use option 5 to choose again.{C_RESET}"
+                f"{C_YELLOW}Selected folder(s) are not available anymore. "
+                f"Use option 5 to select again.{C_RESET}"
             )
             return
+
+    if not folders:
+        print(f"{C_GREEN}No new folders to sync.{C_RESET}")
+        return
 
     for folder, path in folders:
         try:
@@ -270,13 +232,8 @@ def run_sync(commit_msg="Auto-sync"):
                 in error_message
             ):
                 print(
-                    f"{C_RED}GitHub token lacks permission to create "
-                    f"repositories.{C_RESET}"
-                )
-                print(
-                    f"{C_YELLOW}Use a token that can create repos "
-                    f"(classic PAT with 'repo' scope, or a fine-grained token "
-                    f"with repository administration write access).{C_RESET}"
+                    f"{C_RED}GitHub token lacks permission "
+                    f"to create repositories.{C_RESET}"
                 )
                 return
 
@@ -286,8 +243,125 @@ def run_sync(commit_msg="Auto-sync"):
             print(f"{C_RED}Error processing {folder}: {e}{C_RESET}")
 
 
+def curses_switch_folder(stdscr):
+    """Sub-menu with multi-select checkboxes."""
+    global SELECTED_FOLDERS
+    curses.curs_set(0)
+    curses.start_color()
+    curses.init_pair(1, curses.COLOR_CYAN, curses.COLOR_BLACK)
+    curses.init_pair(2, curses.COLOR_YELLOW, curses.COLOR_BLACK)
+    curses.init_pair(3, curses.COLOR_BLACK, curses.COLOR_CYAN)
+
+    folders = get_syncable_folders()
+    if not folders:
+        stdscr.clear()
+        stdscr.addstr(
+            2,
+            2,
+            "No available folders to select right now.",
+            curses.color_pair(2),
+        )
+        stdscr.addstr(4, 2, "Press any key to return...", curses.color_pair(1))
+        stdscr.refresh()
+        stdscr.getch()
+        return
+
+    current_row = 0
+    offset = 0
+    max_visible = 12
+
+    selected_names = [f[0] for f in SELECTED_FOLDERS]
+    selected_indices = {
+        i for i, f in enumerate(folders) if f[0] in selected_names
+    }
+
+    while True:
+        stdscr.clear()
+        stdscr.addstr(
+            1,
+            2,
+            "╔════════════════════════════════════════════════════╗",
+            curses.color_pair(1),
+        )
+        stdscr.addstr(
+            2,
+            2,
+            "║ 📁 SELECT FOLDERS (SPACE to toggle, ENTER to save) ║",
+            curses.color_pair(1),
+        )
+        stdscr.addstr(
+            3,
+            2,
+            "╠════════════════════════════════════════════════════╣",
+            curses.color_pair(1),
+        )
+
+        if current_row < offset:
+            offset = current_row
+        elif current_row >= offset + max_visible:
+            offset = current_row - max_visible + 1
+
+        for i in range(max_visible):
+            index = offset + i
+            if index >= len(folders):
+                break
+
+            folder_name = folders[index][0]
+            y_pos = 4 + i
+
+            is_selected = index in selected_indices
+            checkbox = "[X]" if is_selected else "[ ]"
+            display_text = f"{checkbox} {folder_name}"
+
+            if index == current_row:
+                stdscr.addstr(
+                    y_pos,
+                    4,
+                    display_text.ljust(46),
+                    curses.color_pair(3),
+                )
+            else:
+                color = (
+                    curses.color_pair(2)
+                    if is_selected
+                    else curses.color_pair(1)
+                )
+                stdscr.addstr(y_pos, 4, display_text.ljust(46), color)
+
+        stdscr.addstr(
+            17,
+            2,
+            "╚════════════════════════════════════════════════════╝",
+            curses.color_pair(1),
+        )
+        stdscr.addstr(
+            19,
+            2,
+            "Arrows to move | SPACE to toggle | ENTER to confirm",
+            curses.color_pair(2),
+        )
+        stdscr.addstr(20, 2, "ESC or 'q' to cancel", curses.color_pair(1))
+        stdscr.refresh()
+
+        key = stdscr.getch()
+        if key == curses.KEY_UP and current_row > 0:
+            current_row -= 1
+        elif key == curses.KEY_DOWN and current_row < len(folders) - 1:
+            current_row += 1
+        elif key == ord(' '):
+            if current_row in selected_indices:
+                selected_indices.remove(current_row)
+            else:
+                selected_indices.add(current_row)
+        elif key in [curses.KEY_ENTER, 10, 13]:
+            SELECTED_FOLDERS = [folders[i] for i in selected_indices]
+            return
+        elif key in [27, ord('q')]:
+            return
+
+
 def curses_menu(stdscr):
-    """Draw the interactive curses menu and return selected option."""
+    """Draw the interactive curses main menu and return selected option."""
     curses.curs_set(0)
     curses.start_color()
     curses.init_pair(1, curses.COLOR_CYAN, curses.COLOR_BLACK)
@@ -299,7 +373,7 @@ def curses_menu(stdscr):
         "⚡ Run Auto-Sync Now",
         "📝 Run Sync with Custom Commit",
         "🔄 Start Background Loop (1hr)",
-        "📁 Switch Folder",
+        "📁 Switch Folders (Multi-Select)",
         "🔀 Switch Push Method (SSH/HTTPS)",
         "📂 Change Scan Directory",
         "❌ Exit",
@@ -309,9 +383,14 @@ def curses_menu(stdscr):
 
     while True:
         stdscr.clear()
-        selected_name = (
-            SELECTED_FOLDER[0] if SELECTED_FOLDER else "All folders"
-        )
+
+        if not SELECTED_FOLDERS:
+            selected_name = "All folders"
+        else:
+            names = [f[0] for f in SELECTED_FOLDERS]
+            selected_name = ", ".join(names)
+            if len(selected_name) > 35:
+                selected_name = f"{len(names)} folders selected"
 
         stdscr.addstr(
             1,
@@ -322,7 +401,7 @@ def curses_menu(stdscr):
         stdscr.addstr(
             2,
             2,
-            "║ 🚀 MYGIT AUTOMATION · CURSUS TUI                  ║",
+            "║ 🚀 MYGIT AUTOMATION · CURSES TUI                   ║",
             curses.color_pair(1),
         )
         stdscr.addstr(
@@ -359,7 +438,12 @@ def curses_menu(stdscr):
         for index, item in enumerate(menu_items):
             y_pos = 9 + index
             if index == current_row:
-                stdscr.addstr(y_pos, 4, item.ljust(46), curses.color_pair(3))
+                stdscr.addstr(
+                    y_pos,
+                    4,
+                    item.ljust(46),
+                    curses.color_pair(3),
+                )
             else:
                 stdscr.addstr(y_pos, 4, item.ljust(46), curses.color_pair(1))
 
@@ -390,6 +474,11 @@ def interactive_loop():
     """Handle curses UI and execute selected actions in standard terminal."""
     while True:
         choice = curses.wrapper(curses_menu)
+
+        if choice == 5:
+            curses.wrapper(curses_switch_folder)
+            continue
+
         os.system("clear" if os.name == "posix" else "cls")
 
         if choice == 1:
@@ -410,8 +499,6 @@ def interactive_loop():
                     time.sleep(3600)
             except KeyboardInterrupt:
                 print(f"\n{C_YELLOW}Background loop stopped.{C_RESET}")
-        elif choice == 5:
-            switch_folder()
         elif choice == 6:
             switch_push_method()
         elif choice == 7:
